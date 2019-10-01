@@ -19,6 +19,7 @@ R_API RAnalBlock *r_anal_bb_new() {
 		bb->stackptr = 0;
 		bb->parent_stackptr = INT_MAX;
 		bb->cmpval = UT64_MAX;
+		bb->fcns = r_list_newf (r_anal_function_unref);
 	}
 	return bb;
 }
@@ -30,6 +31,7 @@ R_API void r_anal_bb_free(RAnalBlock *bb) {
 		r_anal_diff_free (bb->diff);
 		free (bb->op_bytes);
 		r_anal_switch_op_free (bb->switch_op);
+		r_list_free (bb->fcns);
 		free (bb->label);
 		free (bb->op_pos);
 		free (bb->parent_reg_arena);
@@ -135,7 +137,7 @@ beach:
 	return R_ANAL_RET_END;
 }
 
-R_API inline int r_anal_bb_is_in_offset (RAnalBlock *bb, ut64 off) {
+R_API bool r_anal_bb_is_in_offset(RAnalBlock *bb, ut64 off) {
 	return (off >= bb->addr && off < bb->addr + bb->size);
 }
 
@@ -150,8 +152,8 @@ R_API RAnalBlock *r_anal_bb_from_offset(RAnal *anal, ut64 off) {
 			r_list_foreach (fcn->bbs, iter2, bb) {
 				if (r_anal_bb_op_starts_at (bb, off)) {
 					return bb;
-				} else if (r_anal_bb_is_in_offset (bb, off)
-				           && (!nearest_bb || nearest_bb->addr < bb->addr)) {
+				}
+				if (r_anal_bb_is_in_offset (bb, off) && (!nearest_bb || nearest_bb->addr < bb->addr)) {
 					nearest_bb = bb;
 				}
 			}
